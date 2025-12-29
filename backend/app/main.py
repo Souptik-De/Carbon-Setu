@@ -1,4 +1,6 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Query
+from typing import Optional
+from datetime import datetime
 from app.schemas import (
     BranchCreate,
     DepartmentCreate,
@@ -7,6 +9,7 @@ from app.schemas import (
 )
 from app.services.calculator import calculate_co2e
 from app.services.ingestor import process_csv_log
+from app.services.recommendation_engine import RecommendationEngine
 from app.database import supabase
 
 app = FastAPI(title="Carbon-Setu API")
@@ -81,6 +84,7 @@ async def log_csv(dept_id: str, file: UploadFile = File(...)):
     count = await process_csv_log(content.decode('utf-8'), dept_id)
     return {"status": "success", "rows_processed": count}
 
+
 @app.get("/analytics/org/{org_id}/total")
 async def get_org_total(org_id: str):
     """Get total emissions for an organization across all branches and departments"""
@@ -154,3 +158,73 @@ async def get_branch_emissions_by_time(
         return {"status": "success", "data": res.data}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/recommendations")
+async def get_recommendations(
+    org_id: Optional[str] = Query(None, description="Organization ID"),
+    branch_id: Optional[str] = Query(None, description="Branch ID"),
+    dept_id: Optional[int] = Query(None, description="Department ID"),
+    start_date: Optional[str] = Query(
+        None, 
+        description="Start date (YYYY-MM-DD)",
+        regex="^\\d{4}-\\d{2}-\\d{2}$"
+    ),
+    end_date: Optional[str] = Query(
+        None,
+        description="End date (YYYY-MM-DD)",
+        regex="^\\d{4}-\\d{2}-\\d{2}$"
+    )
+):
+    """
+    Get AI-powered recommendations for reducing carbon emissions
+    """
+    if not any([org_id, branch_id, dept_id]):
+        raise HTTPException(
+            status_code=400,
+            detail="At least one of org_id, branch_id, or dept_id must be provided"
+        )
+    
+    # Validate dates if provided
+    if start_date and end_date:
+        try:
+            start = datetime.strptime(start_date, "%Y-%m-%d")
+            end = datetime.strptime(end_date, "%Y-%m-%d")
+            if start > end:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Start date must be before end date"
+                )
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid date format. Use YYYY-MM-DD"
+            )
+    
+    try:
+        engine = RecommendationEngine()
+        recommendations = engine.generate_recommendations(
+            org_id=org_id,
+            branch_id=branch_id,
+            dept_id=dept_id,
+            start_date=start_date,
+            end_date=end_date
+        )
+        
+        return {
+            "status": "success",
+            "data": {
+                "recommendations": recommendations,
+                "context": {
+                    "org_id": org_id,
+                    "branch_id": branch_id,
+                    "dept_id": dept_id,
+                    "start_date": start_date,
+                    "end_date": end_date
+                }
+            }
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error generating recommendations: {str(e)}"
+        )
