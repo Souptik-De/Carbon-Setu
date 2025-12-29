@@ -1,10 +1,25 @@
-from pydantic import BaseModel
 from typing import Optional
 
+from pydantic import BaseModel
+
+
+class OrganizationCreate(BaseModel):
+    name: str
+
+
+class BranchCreate(BaseModel):
+    org_id: str
+    name: str
+
+
+class DepartmentCreate(BaseModel):
+    branch_id: str
+    name: str
+
+
 class EmissionLogCreate(BaseModel):
-    dept_id: str
-    category: str      # e.g., "Electricity"
-    activity: str      # e.g., "Grid"
-    value: float       # e.g., 500
-    unit: str          # e.g., "kWh"
+    dept_id: int  # int8 in database
+    category: str  # e.g., "Electricity"
+    activity: str  # e.g., "Grid"
+    value: float  # e.g., 500
     entry_type: str = "manual"

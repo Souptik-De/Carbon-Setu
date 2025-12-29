@@ -11,10 +11,10 @@ def calculate_co2e(category: str, activity: str, value: float):
     if not res.data:
         raise ValueError(f"No factor found for {category} - {activity}")
     
-    factor = res.data['factor']
-    factor_id = res.data['id']
+    factor = float(res.data['factor'])
+    factor_id = int(res.data['id'])  # Ensure this is an int for int8
     
     # Calculation: Value * Factor
-    co2e_kg = value * factor
+    co2e_kg = float(value * factor)  # Explicit float conversion
     
     return co2e_kg, factor_id
