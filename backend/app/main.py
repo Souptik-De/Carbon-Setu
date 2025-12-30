@@ -12,11 +12,12 @@ from app.services.calculator import calculate_co2e
 from app.services.ingestor import process_csv_log
 from app.services.recommendation_engine import RecommendationEngine
 from app.database import supabase
+import os
 
 app = FastAPI(title="Carbon-Setu API")
 
-# Configure CORS
-origins = [
+# Configure CORS - allow production domains and get additional origins from env
+default_origins = [
     "http://localhost:5173",
     "http://localhost:3000",
     "http://127.0.0.1:5173",
@@ -24,14 +25,25 @@ origins = [
     "https://carbon-setu.vercel.app",
 ]
 
+# Add any additional origins from environment variable (comma-separated)
+env_origins = os.environ.get("ALLOWED_ORIGINS", "")
+if env_origins:
+    default_origins.extend([origin.strip() for origin in env_origins.split(",") if origin.strip()])
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=default_origins,
+    allow_origin_regex=r"https://.*\.vercel\.app",  # Allow all Vercel preview deployments
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+
+@app.get("/")
+async def health_check():
+    """Health check endpoint for Render"""
+    return {"status": "healthy", "service": "Carbon-Setu API"}
 
 @app.get("/organizations")
 async def get_organizations():
