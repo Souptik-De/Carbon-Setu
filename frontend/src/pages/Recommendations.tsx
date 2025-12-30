@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { fetchRecommendations, type Recommendation } from "@/services/api";
-import { AlertTriangle, CheckCircle, TrendingDown, ArrowRight, Loader2, Sparkles } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { AlertTriangle, CheckCircle, TrendingDown, Loader2, Sparkles } from "lucide-react";
 import { useFilters } from "@/context/FilterContext";
 import { AnalyticsFilters } from "@/components/analytics/AnalyticsFilters";
 
@@ -120,13 +119,6 @@ export default function RecommendationsPage() {
                                     Est. Cost: {rec.cost_estimate}
                                 </div>
                             )}
-                        </div>
-
-                        <div className="p-4 border-t border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/50">
-                            <Button variant="outline" className="w-full justify-between group-hover:border-primary/50 group-hover:text-primary">
-                                Implement Action
-                                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                            </Button>
                         </div>
                     </div>
                 ))}
