@@ -8,17 +8,19 @@ import {
     AreaChart,
 } from "recharts";
 
-const data = [
-    { name: "Jan", emissions: 4000 },
-    { name: "Feb", emissions: 3000 },
-    { name: "Mar", emissions: 2000 },
-    { name: "Apr", emissions: 2780 },
-    { name: "May", emissions: 1890 },
-    { name: "Jun", emissions: 2390 },
-    { name: "Jul", emissions: 3490 },
-];
+interface TrendChartProps {
+    data?: { name: string; emissions: number }[];
+}
 
-export function TrendChart() {
+export function TrendChart({ data = [] }: TrendChartProps) {
+    if (data.length === 0) {
+        return (
+            <div className="flex h-full items-center justify-center text-neutral-400 text-sm">
+                No trend data available
+            </div>
+        );
+    }
+
     return (
         <ResponsiveContainer width="100%" height="100%">
             <AreaChart

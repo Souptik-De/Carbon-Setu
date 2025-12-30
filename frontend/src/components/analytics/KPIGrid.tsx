@@ -7,37 +7,42 @@ import {
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-export function KPIGrid() {
-    // Mock data - replace with real props later
+interface KPIGridProps {
+    totalEmissions: number;
+}
+
+export function KPIGrid({ totalEmissions }: KPIGridProps) {
     const metrics = [
         {
             title: "Total CO₂e",
-            value: "1,245 tonnes",
-            change: "-12.5%",
-            trend: "down", // down is good for emissions
+            value: `${totalEmissions.toLocaleString("en-US", { maximumFractionDigits: 1 })} kg`,
+            change: "0%", // Placeholder as we don't have historical data yet
+            trend: "neutral",
             icon: Leaf,
-            description: "vs. last month"
+            description: "total emissions"
         },
+        // We can keep placeholders or remove others until we have data. 
+        // Showing updated Total Emissions is the key for now.
         {
             title: "Avg. Daily Emissions",
-            value: "41.5 tonnes",
-            change: "+2.1%",
-            trend: "up",
+            value: `${(totalEmissions / 30).toLocaleString("en-US", { maximumFractionDigits: 1 })} kg`,
+            change: "0%",
+            trend: "neutral",
             icon: Zap,
-            description: "vs. last month"
+            description: "est. based on 30d"
         },
         {
             title: "Top Category",
-            value: "Electricity",
-            change: "45%",
+            value: "TBD", // Requires category breakdown API
+            change: "-",
             trend: "neutral",
             icon: AlertCircle,
             description: "of total emissions"
         },
         {
             title: "Highest Emitting Dept",
-            value: "Manufacturing",
-            change: "850t",
+            value: "TBD", // Requires dept breakdown API
+            change: "-",
             trend: "neutral",
             icon: TrendingUp,
             description: "contribution"

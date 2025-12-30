@@ -18,20 +18,37 @@ class RecommendationEngine:
             if dept_id:
                 # Get department-level emissions
                 res = supabase.rpc('get_department_emissions', {'p_dept_id': dept_id}).execute()
-                if res.data:
-                    context.append(f"Department emissions: {res.data[0].get('total_co2e_kg', 0):.2f} kg CO2e")
+                if res.data and len(res.data) > 0:
+                    data = res.data[0]
+                    val = data['total_co2e_kg'] if isinstance(data, dict) else getattr(data, 'total_co2e_kg', 0)
+                    context.append(f"Department emissions: {val:.2f} kg CO2e")
                     
             elif branch_id:
                 # Get branch-level emissions
                 res = supabase.rpc('get_branch_emissions', {'p_branch_id': branch_id}).execute()
-                if res.data:
-                    context.append(f"Branch emissions: {res.data[0].get('total_co2e_kg', 0):.2f} kg CO2e")
+                if res.data and len(res.data) > 0:
+                    data = res.data[0]
+                    # Handle both dict and object/float cases just in case
+                    if isinstance(data, (int, float)):
+                        val = data
+                    elif isinstance(data, dict):
+                        val = data.get('total_co2e_kg', 0)
+                    else:
+                        val = 0
+                    context.append(f"Branch emissions: {val:.2f} kg CO2e")
                     
             elif org_id:
                 # Get organization-level emissions
                 res = supabase.rpc('get_org_emissions', {'p_org_id': org_id}).execute()
-                if res.data:
-                    context.append(f"Organization emissions: {res.data[0].get('total_co2e_kg', 0):.2f} kg CO2e")
+                if res.data and len(res.data) > 0:
+                    data = res.data[0]
+                    if isinstance(data, (int, float)):
+                        val = data
+                    elif isinstance(data, dict):
+                        val = data.get('total_co2e_kg', 0)
+                    else:
+                        val = 0
+                    context.append(f"Organization emissions: {val:.2f} kg CO2e")
             
             # Add time period context if provided
             if start_date and end_date:
@@ -65,34 +82,64 @@ class RecommendationEngine:
         prompt = (
             "You are a sustainability expert providing specific, actionable recommendations to reduce carbon emissions. "
             f"Here's the current emission data for this {scope_text}:\n\n{context}\n\n"
-            "Please provide 5-7 specific, actionable recommendations to reduce carbon emissions. "
-            "Focus on practical, measurable actions that could be implemented. "
-            "Format the response with clear bullet points, each starting with a verb. "
-            "Be specific to the context provided."
+            "Please provide 4-6 specific, actionable recommendations. "
+            "Return the response ONLY as a valid JSON array of objects. "
+            "Each object must have these exact keys: 'action' (string, title of action), 'description' (string, 1-2 sentence detail), "
+            "'impact' (string, e.g. 'High', 'Medium'), 'difficulty' (string, 'Low', 'Medium', 'High'), 'cost_estimate' (string, e.g. '$500-1000'). "
+            "Do not wrap the JSON in markdown code blocks. Just return the raw JSON string."
         )
         
         try:
             # Call Groq API
             completion = self.client.chat.completions.create(
-                model="moonshotai/kimi-k2-instruct-0905",
+                model="llama-3.1-8b-instant", # switching to a reliable json model
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are a helpful sustainability assistant that provides specific, actionable recommendations for reducing carbon emissions."
+                        "content": "You are a sustainability expert. You must output only valid JSON."
                     },
                     {
                         "role": "user",
                         "content": prompt
                     }
                 ],
-                temperature=0.7,
-                max_tokens=1000,
+                temperature=0.5,
+                max_tokens=1500,
                 top_p=1,
                 stream=False
             )
             
-            return completion.choices[0].message.content
+            content = completion.choices[0].message.content.strip()
+            # Clean up potential markdown wrapping
+            if content.startswith("```json"):
+                content = content[7:]
+            if content.startswith("```"):
+                content = content[3:]
+            if content.endswith("```"):
+                content = content[:-3]
+            
+            import json
+            try:
+                recommendations = json.loads(content)
+                # Ensure it's a list
+                if isinstance(recommendations, dict):
+                    recommendations = [recommendations]
+                return recommendations
+            except json.JSONDecodeError:
+                print(f"Failed to parse JSON from AI: {content}")
+                # Fallback
+                return [{
+                    "action": "Review Energy Usage",
+                    "description": "We couldn't generate specific recommendations at this time, but reviewing your energy bills is always a good start.",
+                    "impact": "Medium",
+                    "difficulty": "Low"
+                }]
             
         except Exception as e:
             print(f"Error generating recommendations: {str(e)}")
-            return "We're currently unable to generate recommendations. Please try again later."
+            return [{
+                "action": "Check System Connection",
+                "description": "Unable to generate recommendations due to a system error.",
+                "impact": "Low",
+                "difficulty": "Low"
+            }]

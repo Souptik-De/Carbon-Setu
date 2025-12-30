@@ -1,18 +1,30 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
 
-const data = [
-    { name: "Electricity", value: 400, color: "#10b981" }, // emerald-500
-    { name: "Transport", value: 300, color: "#3b82f6" },   // blue-500
-    { name: "Waste", value: 300, color: "#f59e0b" },       // amber-500
-    { name: "Heating", value: 200, color: "#ef4444" },     // red-500
-];
+interface CategoryChartProps {
+    data?: { name: string; value: number; color?: string }[];
+}
 
-export function CategoryChart() {
+const COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899"];
+
+export function CategoryChart({ data = [] }: CategoryChartProps) {
+    const chartData = data.map((item, index) => ({
+        ...item,
+        color: item.color || COLORS[index % COLORS.length]
+    }));
+
+    if (chartData.length === 0) {
+        return (
+            <div className="flex h-full items-center justify-center text-neutral-400 text-sm">
+                No category data available
+            </div>
+        );
+    }
+
     return (
         <ResponsiveContainer width="100%" height="100%">
             <PieChart>
                 <Pie
-                    data={data}
+                    data={chartData}
                     cx="50%"
                     cy="50%"
                     innerRadius={60}
@@ -20,13 +32,14 @@ export function CategoryChart() {
                     paddingAngle={5}
                     dataKey="value"
                 >
-                    {data.map((entry, index) => (
+                    {chartData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} strokeWidth={0} />
                     ))}
                 </Pie>
                 <Tooltip
                     contentStyle={{ borderRadius: "8px", border: "none", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)" }}
                     itemStyle={{ color: "#374151", fontWeight: 500 }}
+                    formatter={(value: number) => [`${value} kg`, 'Emissions']}
                 />
                 <Legend
                     verticalAlign="bottom"

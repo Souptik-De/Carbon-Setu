@@ -1,4 +1,5 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional
 from datetime import datetime
 from app.schemas import (
@@ -13,6 +14,48 @@ from app.services.recommendation_engine import RecommendationEngine
 from app.database import supabase
 
 app = FastAPI(title="Carbon-Setu API")
+
+# Configure CORS
+origins = [
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:5173",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.get("/organizations")
+async def get_organizations():
+    try:
+        res = supabase.table("organizations").select("id, name").execute()
+        return {"status": "success", "data": res.data}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/branches/{org_id}")
+async def get_branches(org_id: str):
+    try:
+        res = supabase.table("branches").select("id, name").eq("org_id", org_id).execute()
+        return {"status": "success", "data": res.data}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/departments/{branch_id}")
+async def get_departments(branch_id: str):
+    try:
+        res = supabase.table("departments").select("id, name").eq("branch_id", branch_id).execute()
+        return {"status": "success", "data": res.data}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @app.post("/organizations")
@@ -156,6 +199,69 @@ async def get_branch_emissions_by_time(
         
         res = supabase.rpc('get_branch_emissions_by_time', params).execute()
         return {"status": "success", "data": res.data}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+
+@app.get("/analytics/org/{org_id}/by-category")
+async def get_org_emissions_by_category(org_id: str):
+    try:
+        # Query logs via joins: logs -> emission_factors, logs -> departments -> branches (filter by org_id)
+        # We need emission_factors for 'category'
+        res = supabase.table("carbon_logs").select(
+            "co2e_kg, emission_factors!inner(category), departments!inner(branches!inner(org_id))"
+        ).eq("departments.branches.org_id", org_id).execute()
+        
+        data = {}
+        for row in res.data:
+            # Row structure: {'co2e_kg': 123, 'emission_factors': {'category': 'Transport'}, 'departments': ...}
+            cat = row.get('emission_factors', {}).get('category', 'Unknown')
+            val = row['co2e_kg']
+            data[cat] = data.get(cat, 0) + val
+        
+        formatted = [{"category": k, "value": v} for k, v in data.items()]
+        return {"status": "success", "data": formatted}
+    except Exception as e:
+        print(f"Error fetching org category emissions: {e}")
+        return {"status": "error", "message": str(e), "data": []}
+
+@app.get("/analytics/branch/{branch_id}/by-category")
+async def get_branch_emissions_by_category(branch_id: str):
+    try:
+        # Query: logs -> emission_factors, logs -> departments (filter by branch_id)
+        res = supabase.table("carbon_logs").select(
+            "co2e_kg, emission_factors!inner(category), departments!inner(branch_id)"
+        ).eq("departments.branch_id", branch_id).execute()
+        
+        data = {}
+        for row in res.data:
+            cat = row.get('emission_factors', {}).get('category', 'Unknown')
+            val = row['co2e_kg']
+            data[cat] = data.get(cat, 0) + val
+        
+        formatted = [{"category": k, "value": v} for k, v in data.items()]
+        return {"status": "success", "data": formatted}
+    except Exception as e:
+        print(f"Error fetching branch category emissions: {e}")
+        return {"status": "error", "message": str(e), "data": []}
+
+@app.get("/analytics/department/{dept_id}/by-category")
+async def get_department_emissions_by_category(dept_id: int):
+    try:
+        # Query: logs -> emission_factors
+        res = supabase.table("carbon_logs").select(
+            "co2e_kg, emission_factors!inner(category)"
+        ).eq("dept_id", dept_id).execute()
+        
+        data = {}
+        for row in res.data:
+            cat = row.get('emission_factors', {}).get('category', 'Unknown')
+            val = row['co2e_kg']
+            data[cat] = data.get(cat, 0) + val
+        
+        formatted = [{"category": k, "value": v} for k, v in data.items()]
+        return {"status": "success", "data": formatted}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 

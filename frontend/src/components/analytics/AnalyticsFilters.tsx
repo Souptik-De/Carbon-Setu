@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import {
     Select,
     SelectContent,
@@ -6,46 +7,92 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Filter, Calendar, Download } from "lucide-react";
+import { Filter, Calendar, Download, Play } from "lucide-react";
+import { useFilters } from "@/context/FilterContext";
+import { getOrganizations, getBranches, getDepartments } from "@/services/api";
 
 export function AnalyticsFilters() {
+    const {
+        orgId, setOrgId,
+        branchId, setBranchId,
+        deptId, setDeptId,
+        applyFilters
+        // dateRange, setDateRange 
+    } = useFilters();
+
+    const [orgs, setOrgs] = useState<{ id: string; name: string }[]>([]);
+    const [branches, setBranches] = useState<{ id: string; name: string }[]>([]);
+    const [depts, setDepts] = useState<{ id: number; name: string }[]>([]);
+
+    useEffect(() => {
+        getOrganizations().then((data) => setOrgs(data || []));
+    }, []);
+
+    useEffect(() => {
+        if (orgId) {
+            getBranches(orgId).then((data) => setBranches(data || []));
+            // Reset branch and dept when org changes
+            setBranchId(null);
+            setDeptId(null);
+        } else {
+            setBranches([]);
+            setBranchId(null);
+            setDeptId(null);
+        }
+    }, [orgId]);
+
+    useEffect(() => {
+        if (branchId) {
+            getDepartments(branchId).then((data) => setDepts(data || []));
+            // Reset dept when branch changes
+            setDeptId(null);
+        } else {
+            setDepts([]);
+            setDeptId(null);
+        }
+    }, [branchId]);
+
     return (
         <div className="flex flex-col md:flex-row gap-4 items-end md:items-center justify-between p-1">
 
             {/* Filters Group */}
             <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
-                <Select defaultValue="all-orgs">
+                <Select value={orgId || ""} onValueChange={setOrgId}>
                     <SelectTrigger className="w-[180px] bg-white dark:bg-neutral-900">
                         <SelectValue placeholder="Organization" />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="all-orgs">All Organizations</SelectItem>
-                        <SelectItem value="tech-corp">Tech Corp Global</SelectItem>
-                        <SelectItem value="green-inc">Green Inc.</SelectItem>
+                        {orgs.map((org) => (
+                            <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
+                        ))}
                     </SelectContent>
                 </Select>
 
-                <Select defaultValue="all-branches">
+                <Select value={branchId || "all"} onValueChange={(val) => setBranchId(val === "all" ? null : val)} disabled={!orgId}>
                     <SelectTrigger className="w-[180px] bg-white dark:bg-neutral-900">
-                        <SelectValue placeholder="Branch" />
+                        <SelectValue placeholder="All Branches" />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="all-branches">All Branches</SelectItem>
-                        <SelectItem value="ny-hq">New York HQ</SelectItem>
-                        <SelectItem value="ldn-office">London Office</SelectItem>
-                        <SelectItem value="mum-branch">Mumbai Branch</SelectItem>
+                        <SelectItem value="all">All Branches</SelectItem>
+                        {branches.map((branch) => (
+                            <SelectItem key={branch.id} value={branch.id}>{branch.name}</SelectItem>
+                        ))}
                     </SelectContent>
                 </Select>
 
-                <Select defaultValue="all-depts">
+                <Select
+                    value={deptId?.toString() || "all"}
+                    onValueChange={(val) => setDeptId(val === "all" ? null : parseInt(val))}
+                    disabled={!branchId}
+                >
                     <SelectTrigger className="w-[180px] bg-white dark:bg-neutral-900">
-                        <SelectValue placeholder="Department" />
+                        <SelectValue placeholder="All Departments" />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="all-depts">All Departments</SelectItem>
-                        <SelectItem value="finance">Finance</SelectItem>
-                        <SelectItem value="ops">Operations</SelectItem>
-                        <SelectItem value="it">IT & Engineering</SelectItem>
+                        <SelectItem value="all">All Departments</SelectItem>
+                        {depts.map((dept) => (
+                            <SelectItem key={dept.id} value={dept.id.toString()}>{dept.name}</SelectItem>
+                        ))}
                     </SelectContent>
                 </Select>
             </div>
@@ -66,6 +113,11 @@ export function AnalyticsFilters() {
                         <SelectItem value="ytd">Year to Date</SelectItem>
                     </SelectContent>
                 </Select>
+
+                <Button variant="default" onClick={applyFilters} disabled={!orgId} className="gap-2">
+                    <Play className="h-4 w-4" />
+                    Show
+                </Button>
 
                 <Button variant="outline" size="icon">
                     <Filter className="h-4 w-4" />
