@@ -1,14 +1,18 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import AnalyticsPage from "./pages/Analytics";
-import { ComponentExample } from "@/components/component-example";
+import DataEntryPage from "./pages/DataEntry";
+import { Layout } from "@/components/layout/Layout";
+// import { ComponentExample } from "@/components/component-example";
 
 export function App() {
     return (
         <BrowserRouter>
             <Routes>
-                <Route path="/" element={<ComponentExample />} />
-                <Route path="/analytics" element={<AnalyticsPage />} />
-                {/* Default redirect to analytics for now for easy viewing if desired, or keep as is */}
+                <Route element={<Layout />}>
+                    {/* <Route path="/" element={<ComponentExample />} /> */}
+                    <Route path="/analytics" element={<AnalyticsPage />} />
+                    <Route path="/data" element={<DataEntryPage />} />
+                </Route>
             </Routes>
         </BrowserRouter>
     );
