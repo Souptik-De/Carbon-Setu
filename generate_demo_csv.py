@@ -8,30 +8,26 @@ START_DATE = datetime.now() - timedelta(days=365)
 END_DATE = datetime.now()
 
 # Categories and their typical activities and value ranges
+# Categories and their typical activities and value ranges (Min, Max) based on backend/app/scripts/seed_factors.py
 CATEGORIES = {
-    "Electricity": [
-        ("Grid Consumption (kWh)", 500, 2000),
-        ("Server Room Cooling (kWh)", 200, 800)
+    "Energy": [
+        ("Grid Electricity", 200, 5000), # kWh
+        ("Natural Gas", 50, 1000)        # m3
     ],
-    "Transportation": [
-        ("Fleet Petrol (Liters)", 50, 300),
-        ("Fleet Diesel (Liters)", 100, 500),
-        ("Business Travel - Domestic Flights (km)", 500, 2000),
-        ("Employee Commute - Car (km)", 100, 1000)
-    ],
-    "Stationary Combustion": [
-        ("Diesel Generator (Liters)", 20, 100),
-        ("Natural Gas Heating (m3)", 50, 200)
-    ],
-    "Purchased Goods": [
-        ("Office Paper (Reams)", 10, 50),
-        ("IT Equipment (Units)", 1, 10),
-        ("Office Furniture (kg)", 50, 200)
+    "Transport": [
+        ("Petrol (Passenger Car)", 20, 150), # Litre
+        ("Diesel (Truck/Van)", 50, 300)      # Litre
     ],
     "Waste": [
-        ("Landfill Waste (kg)", 20, 100),
-        ("Recycled Paper (kg)", 10, 50),
-        ("E-Waste (kg)", 5, 20)
+        ("General Landfill", 0.1, 2.0),      # Tonne
+        ("Paper Recycling", 0.05, 0.5)       # Tonne
+    ],
+    "Water": [
+        ("Municipal Water", 10, 100)         # m3
+    ],
+    "Travel": [
+        ("Short-haul Flight", 300, 1500),    # km
+        ("Long-haul Flight", 3000, 12000)    # km
     ]
 }
 
@@ -52,10 +48,10 @@ def generate_data():
             # Generate a random value with some seasonality/variance
             base_value = random.uniform(min_val, max_val)
             
-            # Add some seasonality to Electricity (higher in summer/winter)
+            # Add some seasonality to Energy (higher in summer/winter for AC/Heating)
             month = current_date.month
-            if cat == "Electricity" and (month in [12, 1, 2, 6, 7, 8]):
-                base_value *= 1.2
+            if cat == "Energy" and (month in [12, 1, 2, 6, 7, 8]):
+                base_value *= 1.3
             
             # Add randomness
             value = round(base_value * random.uniform(0.9, 1.1), 2)
