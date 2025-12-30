@@ -183,6 +183,60 @@ export default function AnalyticsPage() {
         fetchData();
     }, [appliedFilters]);
 
+    const handleExport = () => {
+        if ((!totalEmissions && totalEmissions !== 0) || categoryData.length === 0) {
+            // Nothing to export or data not loaded
+            return;
+        }
+
+        // Prepare CSV content
+        const rows = [
+            ["Metric", "Value"],
+            ["Total Emissions", `${totalEmissions} kg`]
+        ];
+
+        // Top Category
+        const topCat = categoryData.reduce((prev, curr) => (curr.value > prev.value ? curr : prev), categoryData[0]);
+        if (topCat) {
+            rows.push(["Top Category", topCat.name]);
+        }
+
+        // Top Department
+        if (departmentData && departmentData.length > 0) {
+            const topDept = departmentData.reduce((prev, curr) => (curr.total_emissions > prev.total_emissions ? curr : prev), departmentData[0]);
+            if (topDept) {
+                rows.push(["Highest Emitting Dept", topDept.dept_name]);
+            }
+        }
+
+        rows.push([]);
+        rows.push(["Category Breakdown", "Emissions (kg)"]);
+        categoryData.forEach(c => rows.push([c.name, c.value.toString()]));
+
+        if (departmentData && departmentData.length > 0) {
+            rows.push([]);
+            rows.push(["Department Breakdown", "Emissions (kg)"]);
+            departmentData.forEach(d => rows.push([d.dept_name, d.total_emissions.toString()]));
+        }
+
+        if (trendData && trendData.length > 0) {
+            rows.push([]);
+            rows.push(["Trend Data (Date)", "Emissions (kg)"]);
+            trendData.forEach(t => rows.push([t.date || t.name, t.emissions || 0]));
+        }
+
+        const csvContent = "data:text/csv;charset=utf-8,"
+            + rows.map(e => e.join(",")).join("\n");
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `carbon_analytics_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     if (!appliedFilters.orgId) {
         return (
             <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 p-4 md:p-8 space-y-8 font-sans">
@@ -222,7 +276,7 @@ export default function AnalyticsPage() {
                     </p>
                 </div>
 
-                <AnalyticsFilters />
+                <AnalyticsFilters onExport={handleExport} />
             </div>
 
             {loading ? (

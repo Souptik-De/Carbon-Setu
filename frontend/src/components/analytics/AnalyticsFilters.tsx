@@ -7,11 +7,15 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Filter, Calendar, Download, Play } from "lucide-react";
+import { Calendar, Download, Play } from "lucide-react";
 import { useFilters } from "@/context/FilterContext";
 import { getOrganizations, getBranches, getDepartments } from "@/services/api";
 
-export function AnalyticsFilters() {
+interface AnalyticsFiltersProps {
+    onExport?: () => void;
+}
+
+export function AnalyticsFilters({ onExport }: AnalyticsFiltersProps) {
     const {
         orgId, setOrgId,
         branchId, setBranchId,
@@ -119,13 +123,12 @@ export function AnalyticsFilters() {
                     Show
                 </Button>
 
-                <Button variant="outline" size="icon">
-                    <Filter className="h-4 w-4" />
-                </Button>
-                <Button variant="outline" className="gap-2">
-                    <Download className="h-4 w-4" />
-                    Export
-                </Button>
+                {onExport && (
+                    <Button variant="outline" className="gap-2" onClick={onExport}>
+                        <Download className="h-4 w-4" />
+                        Export
+                    </Button>
+                )}
             </div>
         </div>
     );
