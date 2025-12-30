@@ -20,6 +20,8 @@ origins = [
     "http://localhost:5173",
     "http://localhost:3000",
     "http://127.0.0.1:5173",
+    "https://carbon-setu-mu.vercel.app",
+    "https://carbon-setu.vercel.app",
 ]
 
 app.add_middleware(
