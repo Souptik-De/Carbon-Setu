@@ -75,8 +75,6 @@ async def create_branch(payload: BranchCreate):
         "org_id": payload.org_id,
         "name": payload.name,
     }
-    if payload.location:
-        branch_row["location"] = payload.location
 
     try:
         res = supabase.table("branches").insert(branch_row).execute()

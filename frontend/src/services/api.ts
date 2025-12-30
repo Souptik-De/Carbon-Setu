@@ -128,3 +128,88 @@ export const getEmissionsByTime = async (
     const json = await response.json();
     return json.data;
 };
+
+// POST functions for Data Management
+
+export const createOrganization = async (name: string) => {
+    const response = await fetch(`${API_URL}/organizations`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+    });
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || "Failed to create organization");
+    }
+    const json = await response.json();
+    return json.data;
+};
+
+export const createBranch = async (orgId: string, name: string) => {
+    const response = await fetch(`${API_URL}/branches`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ org_id: orgId, name }),
+    });
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || "Failed to create branch");
+    }
+    const json = await response.json();
+    return json.data;
+};
+
+export const createDepartment = async (branchId: string, name: string) => {
+    const response = await fetch(`${API_URL}/departments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ branch_id: branchId, name }),
+    });
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || "Failed to create department");
+    }
+    const json = await response.json();
+    return json.data;
+};
+
+export const logManualEmission = async (
+    deptId: number,
+    category: string,
+    activity: string,
+    value: number
+) => {
+    const response = await fetch(`${API_URL}/log/manual`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            dept_id: deptId,
+            category,
+            activity,
+            value,
+            entry_type: "manual",
+        }),
+    });
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || "Failed to log emission");
+    }
+    const json = await response.json();
+    return json;
+};
+
+export const uploadCSVLogs = async (deptId: string, file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await fetch(`${API_URL}/log/csv/${deptId}`, {
+        method: "POST",
+        body: formData,
+    });
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || "Failed to upload CSV");
+    }
+    const json = await response.json();
+    return json;
+};
