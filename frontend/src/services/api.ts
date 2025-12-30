@@ -195,7 +195,8 @@ export const logManualEmission = async (
     deptId: number,
     category: string,
     activity: string,
-    value: number
+    value: number,
+    activityDate?: string  // Optional: YYYY-MM-DD format
 ) => {
     const response = await fetch(`${API_URL}/log/manual`, {
         method: "POST",
@@ -206,6 +207,7 @@ export const logManualEmission = async (
             activity,
             value,
             entry_type: "manual",
+            activity_date: activityDate || null,
         }),
     });
     if (!response.ok) {

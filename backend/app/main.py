@@ -103,12 +103,16 @@ async def log_manual(data: EmissionLogCreate):
     try:
         co2e, factor_id = calculate_co2e(data.category, data.activity, data.value)
 
+        # Use provided activity_date or default to today
+        activity_date = data.activity_date.isoformat() if data.activity_date else datetime.now().date().isoformat()
+
         log_entry = {
             "dept_id": int(data.dept_id),  # This is now an int
             "factor_id": int(factor_id),  # This will be an int from calculate_co2e
             "value": float(data.value),
             "co2e_kg": float(co2e),
             "entry_type": data.entry_type,
+            "activity_date": activity_date,
         }
 
         res = supabase.table("carbon_logs").insert(log_entry).execute()

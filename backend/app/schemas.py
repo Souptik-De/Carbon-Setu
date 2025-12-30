@@ -1,4 +1,5 @@
 from typing import Optional
+from datetime import date
 
 from pydantic import BaseModel
 
@@ -23,3 +24,4 @@ class EmissionLogCreate(BaseModel):
     activity: str  # e.g., "Grid"
     value: float  # e.g., 500
     entry_type: str = "manual"
+    activity_date: Optional[date] = None  # Date of the activity, defaults to today if not provided

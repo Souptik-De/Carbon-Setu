@@ -61,6 +61,7 @@ export function LogsForm() {
     const [category, setCategory] = useState("");
     const [activity, setActivity] = useState("");
     const [value, setValue] = useState("");
+    const [activityDate, setActivityDate] = useState(new Date().toISOString().split('T')[0]);
     const [manualLoading, setManualLoading] = useState(false);
     const [manualSuccess, setManualSuccess] = useState(false);
     const [manualError, setManualError] = useState<string | null>(null);
@@ -153,11 +154,18 @@ export function LogsForm() {
         setManualSuccess(false);
 
         try {
-            await logManualEmission(parseInt(selectedDept), category, activity, parseFloat(value));
+            await logManualEmission(
+                parseInt(selectedDept),
+                category,
+                activity,
+                parseFloat(value),
+                activityDate
+            );
             setManualSuccess(true);
             setValue("");
             setCategory("");
             setActivity("");
+            setActivityDate(new Date().toISOString().split('T')[0]);
             setTimeout(() => setManualSuccess(false), 3000);
         } catch (err) {
             setManualError(err instanceof Error ? err.message : "Failed to log emission");
@@ -311,6 +319,18 @@ export function LogsForm() {
                             />
                         </div>
 
+                        <div className="grid gap-2">
+                            <Label htmlFor="log-date">Activity Date</Label>
+                            <Input
+                                id="log-date"
+                                type="date"
+                                value={activityDate}
+                                onChange={(e) => setActivityDate(e.target.value)}
+                                disabled={manualLoading}
+                                max={new Date().toISOString().split('T')[0]}
+                            />
+                        </div>
+
                         {manualError && (
                             <p className="text-sm text-red-500">{manualError}</p>
                         )}
@@ -366,10 +386,11 @@ export function LogsForm() {
                         <div className="bg-neutral-50 dark:bg-neutral-900 rounded-lg p-4 text-sm">
                             <p className="font-medium mb-2">CSV Format Required:</p>
                             <code className="block bg-neutral-200 dark:bg-neutral-800 p-2 rounded text-xs">
-                                category,activity,value<br />
-                                Energy,Grid Electricity,500<br />
-                                Transport,Petrol (Passenger Car),50
+                                category,activity,value,activity_date<br />
+                                Energy,Grid Electricity,500,2025-12-30<br />
+                                Transport,Petrol (Passenger Car),50,2025-12-29
                             </code>
+                            <p className="text-xs text-neutral-500 mt-2">Note: activity_date is optional (YYYY-MM-DD format)</p>
                         </div>
 
                         {csvError && (
