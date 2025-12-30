@@ -1,7 +1,7 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 from app.schemas import (
     BranchCreate,
     DepartmentCreate,
@@ -157,7 +157,7 @@ async def get_department_total(dept_id: int):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-# Time-based rollups
+# Time-based rollups using activity_date
 @app.get("/analytics/org/{org_id}/by-time")
 async def get_org_emissions_by_time(
     org_id: str,
@@ -165,19 +165,43 @@ async def get_org_emissions_by_time(
     start_date: str = None,
     end_date: str = None
 ):
-    """Get emissions for an organization grouped by time period"""
+    """Get emissions for an organization grouped by activity_date period"""
     try:
-        params = {
-            'p_org_id': org_id,
-            'p_period': period,
-            'p_start_date': start_date,
-            'p_end_date': end_date
-        }
-        # Remove None values
-        params = {k: v for k, v in params.items() if v is not None}
+        # Query logs with activity_date and join to filter by org
+        res = supabase.table("carbon_logs").select(
+            "co2e_kg, activity_date, departments!inner(branches!inner(org_id))"
+        ).eq("departments.branches.org_id", org_id).execute()
         
-        res = supabase.rpc('get_org_emissions_by_time', params).execute()
-        return {"status": "success", "data": res.data}
+        # Group by period
+        data = {}
+        for row in res.data:
+            activity_date = row.get('activity_date')
+            if not activity_date:
+                continue
+            
+            # Parse date and truncate based on period
+            try:
+                date_obj = datetime.strptime(activity_date.split('T')[0], "%Y-%m-%d")
+                if period == "day":
+                    key = date_obj.strftime("%Y-%m-%d")
+                elif period == "week":
+                    # Get start of week (Monday)
+                    start_of_week = date_obj - timedelta(days=date_obj.weekday())
+                    key = start_of_week.strftime("%Y-%m-%d")
+                elif period == "month":
+                    key = date_obj.strftime("%Y-%m-01")
+                elif period == "year":
+                    key = date_obj.strftime("%Y-01-01")
+                else:
+                    key = date_obj.strftime("%Y-%m-01")  # default to month
+                
+                data[key] = data.get(key, 0) + row['co2e_kg']
+            except (ValueError, TypeError):
+                continue
+        
+        # Format response
+        formatted = [{"period_start": k, "total_emissions": v} for k, v in sorted(data.items())]
+        return {"status": "success", "data": formatted}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -188,19 +212,43 @@ async def get_branch_emissions_by_time(
     start_date: str = None,
     end_date: str = None
 ):
-    """Get emissions for a branch grouped by time period"""
+    """Get emissions for a branch grouped by activity_date period"""
     try:
-        params = {
-            'p_branch_id': branch_id,
-            'p_period': period,
-            'p_start_date': start_date,
-            'p_end_date': end_date
-        }
-        # Remove None values
-        params = {k: v for k, v in params.items() if v is not None}
+        # Query logs with activity_date and join to filter by branch
+        res = supabase.table("carbon_logs").select(
+            "co2e_kg, activity_date, departments!inner(branch_id)"
+        ).eq("departments.branch_id", branch_id).execute()
         
-        res = supabase.rpc('get_branch_emissions_by_time', params).execute()
-        return {"status": "success", "data": res.data}
+        # Group by period
+        data = {}
+        for row in res.data:
+            activity_date = row.get('activity_date')
+            if not activity_date:
+                continue
+            
+            # Parse date and truncate based on period
+            try:
+                date_obj = datetime.strptime(activity_date.split('T')[0], "%Y-%m-%d")
+                if period == "day":
+                    key = date_obj.strftime("%Y-%m-%d")
+                elif period == "week":
+                    # Get start of week (Monday)
+                    start_of_week = date_obj - timedelta(days=date_obj.weekday())
+                    key = start_of_week.strftime("%Y-%m-%d")
+                elif period == "month":
+                    key = date_obj.strftime("%Y-%m-01")
+                elif period == "year":
+                    key = date_obj.strftime("%Y-01-01")
+                else:
+                    key = date_obj.strftime("%Y-%m-01")  # default to month
+                
+                data[key] = data.get(key, 0) + row['co2e_kg']
+            except (ValueError, TypeError):
+                continue
+        
+        # Format response
+        formatted = [{"period_start": k, "total_emissions": v} for k, v in sorted(data.items())]
+        return {"status": "success", "data": formatted}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
