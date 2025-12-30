@@ -363,6 +363,15 @@ export function LogsForm() {
                             </div>
                         </div>
 
+                        <div className="bg-neutral-50 dark:bg-neutral-900 rounded-lg p-4 text-sm">
+                            <p className="font-medium mb-2">CSV Format Required:</p>
+                            <code className="block bg-neutral-200 dark:bg-neutral-800 p-2 rounded text-xs">
+                                category,activity,value<br />
+                                Energy,Grid Electricity,500<br />
+                                Transport,Petrol (Passenger Car),50
+                            </code>
+                        </div>
+
                         {csvError && (
                             <p className="text-sm text-red-500">{csvError}</p>
                         )}
