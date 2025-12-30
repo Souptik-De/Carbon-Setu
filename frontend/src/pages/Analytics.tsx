@@ -166,7 +166,8 @@ export default function AnalyticsPage() {
                 // Handle Trend
                 if (trendRes) {
                     const formatted = trendRes.map((item: any) => ({
-                        name: item.period,
+                        name: item.period_start || item.period,
+                        date: item.period_start || item.period,
                         emissions: item.total_emissions
                     }));
                     setTrendData(formatted);
