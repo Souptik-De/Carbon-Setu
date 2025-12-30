@@ -2,6 +2,8 @@ import { KPIGrid } from "@/components/analytics/KPIGrid";
 import { AnalyticsFilters } from "@/components/analytics/AnalyticsFilters";
 import { CategoryChart } from "@/components/analytics/CategoryChart";
 import { TrendChart } from "@/components/analytics/TrendChart";
+import { BreakdownChart } from "@/components/analytics/BreakdownChart";
+import { TopEmittersTable } from "@/components/analytics/TopEmittersTable";
 import { useFilters } from "@/context/FilterContext";
 import { useEffect, useState } from "react";
 import { getEmissionsTotal, getEmissionsByCategory, getEmissionsByTime, getEmissionsByDepartment } from "@/services/api";
@@ -18,12 +20,26 @@ interface DepartmentData {
     total_emissions: number;
 }
 
+interface BreakdownData {
+    name: string;
+    [category: string]: string | number;
+}
+
+interface EmitterData {
+    dept_name: string;
+    category: string;
+    emissions: number;
+    percent: number;
+}
+
 export default function AnalyticsPage() {
     const { appliedFilters } = useFilters();
     const [totalEmissions, setTotalEmissions] = useState<number | null>(null);
     const [categoryData, setCategoryData] = useState<CategoryData[]>([]);
     const [departmentData, setDepartmentData] = useState<DepartmentData[]>([]);
     const [trendData, setTrendData] = useState<any[]>([]);
+    const [breakdownData, setBreakdownData] = useState<BreakdownData[]>([]);
+    const [topEmittersData, setTopEmittersData] = useState<EmitterData[]>([]);
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
@@ -33,6 +49,8 @@ export default function AnalyticsPage() {
                 setCategoryData([]);
                 setDepartmentData([]);
                 setTrendData([]);
+                setBreakdownData([]);
+                setTopEmittersData([]);
                 return;
             }
 
@@ -70,16 +88,28 @@ export default function AnalyticsPage() {
 
                 const [totalRes, catRes, deptRes, trendRes] = await Promise.all([totalProm, catProm, deptProm, trendProm]);
 
-                // Handle Total
-                if (totalRes && totalRes.length > 0) {
-                    setTotalEmissions(totalRes[0].total_emissions || 0);
+                // Handle Total - API may return number directly or array with objects
+                let total = 0;
+                if (totalRes !== null && totalRes !== undefined) {
+                    if (typeof totalRes === 'number') {
+                        // Org total returns a direct number
+                        total = totalRes;
+                    } else if (Array.isArray(totalRes) && totalRes.length > 0) {
+                        // Branch/Dept totals return array with objects
+                        total = totalRes[0].total_emissions || 0;
+                    } else if (typeof totalRes === 'object' && 'total_emissions' in totalRes) {
+                        // Single object response
+                        total = totalRes.total_emissions || 0;
+                    }
+                    setTotalEmissions(total);
                 } else {
                     setTotalEmissions(0);
                 }
 
                 // Handle Category
+                let formattedCat: CategoryData[] = [];
                 if (catRes) {
-                    const formattedCat = catRes.map((item: any) => ({
+                    formattedCat = catRes.map((item: any) => ({
                         name: item.category || item.category_name || "Unknown",
                         value: item.total_emissions || item.value || 0,
                         ...item
@@ -90,12 +120,47 @@ export default function AnalyticsPage() {
                 // Handle Department
                 if (deptRes && deptRes.length > 0) {
                     setDepartmentData(deptRes);
+
+                    // Create breakdown data for BreakdownChart
+                    // This shows each department's emissions breakdown
+                    const breakdown: BreakdownData[] = deptRes.slice(0, 5).map((dept: DepartmentData) => ({
+                        name: dept.dept_name.length > 12 ? dept.dept_name.slice(0, 12) + '...' : dept.dept_name,
+                        Emissions: dept.total_emissions
+                    }));
+                    setBreakdownData(breakdown);
+
+                    // Create top emitters data combining dept info
+                    // Show top emitting departments with their contribution %
+                    const emitters: EmitterData[] = deptRes
+                        .slice(0, 6)
+                        .map((dept: DepartmentData) => ({
+                            dept_name: dept.dept_name,
+                            category: "All Categories",
+                            emissions: dept.total_emissions,
+                            percent: total > 0 ? (dept.total_emissions / total) * 100 : 0
+                        }));
+                    setTopEmittersData(emitters);
                 } else if (appliedFilters.deptId) {
-                    // When a specific department is selected, show it as the only dept
-                    // We'll get the dept name from the filter context if available
                     setDepartmentData([]);
+                    setBreakdownData([]);
+                    // When filtering by specific dept, show category breakdown as emitters
+                    if (formattedCat.length > 0) {
+                        const emitters: EmitterData[] = formattedCat
+                            .slice(0, 6)
+                            .map((cat) => ({
+                                dept_name: "Selected Dept",
+                                category: cat.name,
+                                emissions: cat.value,
+                                percent: total > 0 ? (cat.value / total) * 100 : 0
+                            }));
+                        setTopEmittersData(emitters);
+                    } else {
+                        setTopEmittersData([]);
+                    }
                 } else {
                     setDepartmentData([]);
+                    setBreakdownData([]);
+                    setTopEmittersData([]);
                 }
 
                 // Handle Trend
@@ -192,7 +257,18 @@ export default function AnalyticsPage() {
                         </div>
                     </div>
 
-                    {/* Removed other charts to ensure only real data is shown */}
+                    {/* Row 3: Department Breakdown (Bar Chart) & Top Emitters Table */}
+                    <div className="lg:col-span-5 h-80 border border-neutral-200 dark:border-neutral-800 rounded-xl bg-white dark:bg-neutral-900 shadow-sm p-6 flex flex-col">
+                        <h3 className="font-semibold mb-4 text-neutral-900 dark:text-neutral-50">Emissions by Department</h3>
+                        <div className="flex-1 w-full min-h-0">
+                            <BreakdownChart data={breakdownData} />
+                        </div>
+                    </div>
+
+                    <div className="lg:col-span-7 border border-neutral-200 dark:border-neutral-800 rounded-xl bg-white dark:bg-neutral-900 shadow-sm p-6 flex flex-col">
+                        <h3 className="font-semibold mb-4 text-neutral-900 dark:text-neutral-50">Top Emitters</h3>
+                        <TopEmittersTable data={topEmittersData} />
+                    </div>
                 </div>
             )}
         </div>

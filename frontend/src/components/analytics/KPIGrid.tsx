@@ -51,7 +51,7 @@ export function KPIGrid({ totalEmissions, categoryData = [], departmentData = []
             title: "Total CO₂e",
             value: `${totalEmissions.toLocaleString("en-US", { maximumFractionDigits: 1 })} kg`,
             change: "0%",
-            trend: "neutral" as const,
+            trend: "neutral" as "up" | "down" | "neutral",
             icon: Leaf,
             description: "total emissions"
         },
@@ -59,7 +59,7 @@ export function KPIGrid({ totalEmissions, categoryData = [], departmentData = []
             title: "Avg. Daily Emissions",
             value: `${(totalEmissions / 30).toLocaleString("en-US", { maximumFractionDigits: 1 })} kg`,
             change: "0%",
-            trend: "neutral" as const,
+            trend: "neutral" as "up" | "down" | "neutral",
             icon: Zap,
             description: "est. based on 30d"
         },
@@ -67,7 +67,7 @@ export function KPIGrid({ totalEmissions, categoryData = [], departmentData = []
             title: "Top Category",
             value: topCategory ? topCategory.name : "N/A",
             change: topCategoryPercent ? `${topCategoryPercent}%` : "-",
-            trend: "neutral" as const,
+            trend: "neutral" as "up" | "down" | "neutral",
             icon: AlertCircle,
             description: "of total emissions"
         },
@@ -75,7 +75,7 @@ export function KPIGrid({ totalEmissions, categoryData = [], departmentData = []
             title: "Highest Emitting Dept",
             value: topDepartment ? topDepartment.dept_name : "N/A",
             change: topDeptPercent ? `${topDeptPercent}%` : "-",
-            trend: "neutral" as const,
+            trend: "neutral" as "up" | "down" | "neutral",
             icon: Building2,
             description: "contribution"
         }
