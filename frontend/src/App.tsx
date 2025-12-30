@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import AnalyticsPage from "./pages/Analytics";
 import DataEntryPage from "./pages/DataEntry";
 import RecommendationsPage from "./pages/Recommendations";
@@ -13,7 +13,7 @@ export function App() {
             <BrowserRouter>
                 <Routes>
                     <Route element={<Layout />}>
-                        {/* <Route path="/" element={<ComponentExample />} /> */}
+                        <Route path="/" element={<Navigate to="/analytics" replace />} />
                         <Route path="/analytics" element={<AnalyticsPage />} />
                         <Route path="/data" element={<DataEntryPage />} />
                         <Route path="/recommendations" element={<RecommendationsPage />} />
