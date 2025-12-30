@@ -2,17 +2,27 @@ import { KPIGrid } from "@/components/analytics/KPIGrid";
 import { AnalyticsFilters } from "@/components/analytics/AnalyticsFilters";
 import { CategoryChart } from "@/components/analytics/CategoryChart";
 import { TrendChart } from "@/components/analytics/TrendChart";
-// import { BreakdownChart } from "@/components/analytics/BreakdownChart";
-// import { TopEmittersTable } from "@/components/analytics/TopEmittersTable";
 import { useFilters } from "@/context/FilterContext";
 import { useEffect, useState } from "react";
-import { getEmissionsTotal, getEmissionsByCategory, getEmissionsByTime } from "@/services/api";
+import { getEmissionsTotal, getEmissionsByCategory, getEmissionsByTime, getEmissionsByDepartment } from "@/services/api";
 import { Sparkles, Loader2 } from "lucide-react";
+
+interface CategoryData {
+    name: string;
+    value: number;
+}
+
+interface DepartmentData {
+    dept_id: string;
+    dept_name: string;
+    total_emissions: number;
+}
 
 export default function AnalyticsPage() {
     const { appliedFilters } = useFilters();
     const [totalEmissions, setTotalEmissions] = useState<number | null>(null);
-    const [categoryData, setCategoryData] = useState<any[]>([]);
+    const [categoryData, setCategoryData] = useState<CategoryData[]>([]);
+    const [departmentData, setDepartmentData] = useState<DepartmentData[]>([]);
     const [trendData, setTrendData] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
 
@@ -21,6 +31,7 @@ export default function AnalyticsPage() {
             if (!appliedFilters.orgId) {
                 setTotalEmissions(null);
                 setCategoryData([]);
+                setDepartmentData([]);
                 setTrendData([]);
                 return;
             }
@@ -41,6 +52,14 @@ export default function AnalyticsPage() {
                     appliedFilters.deptId || undefined
                 );
 
+                // Fetch Department Breakdown (only if not filtering by a specific dept)
+                const deptProm = !appliedFilters.deptId
+                    ? getEmissionsByDepartment(
+                        appliedFilters.orgId,
+                        appliedFilters.branchId || undefined
+                    )
+                    : Promise.resolve([]);
+
                 // Fetch Trend
                 const trendProm = getEmissionsByTime(
                     appliedFilters.orgId,
@@ -49,7 +68,7 @@ export default function AnalyticsPage() {
                     "month"
                 );
 
-                const [totalRes, catRes, trendRes] = await Promise.all([totalProm, catProm, trendProm]);
+                const [totalRes, catRes, deptRes, trendRes] = await Promise.all([totalProm, catProm, deptProm, trendProm]);
 
                 // Handle Total
                 if (totalRes && totalRes.length > 0) {
@@ -62,10 +81,21 @@ export default function AnalyticsPage() {
                 if (catRes) {
                     const formattedCat = catRes.map((item: any) => ({
                         name: item.category || item.category_name || "Unknown",
-                        value: item.total_emissions,
+                        value: item.total_emissions || item.value || 0,
                         ...item
                     }));
                     setCategoryData(formattedCat);
+                }
+
+                // Handle Department
+                if (deptRes && deptRes.length > 0) {
+                    setDepartmentData(deptRes);
+                } else if (appliedFilters.deptId) {
+                    // When a specific department is selected, show it as the only dept
+                    // We'll get the dept name from the filter context if available
+                    setDepartmentData([]);
+                } else {
+                    setDepartmentData([]);
                 }
 
                 // Handle Trend
@@ -140,7 +170,11 @@ export default function AnalyticsPage() {
 
                     {/* Row 1: KPI Cards */}
                     <div className="lg:col-span-12">
-                        <KPIGrid totalEmissions={totalEmissions || 0} />
+                        <KPIGrid
+                            totalEmissions={totalEmissions || 0}
+                            categoryData={categoryData}
+                            departmentData={departmentData}
+                        />
                     </div>
 
                     {/* Row 2: Category Contribution (Donut) & Trends (Line) */}

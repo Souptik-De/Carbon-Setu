@@ -3,48 +3,80 @@ import {
     TrendingUp,
     AlertCircle,
     Zap,
-    Leaf
+    Leaf,
+    Building2
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-interface KPIGridProps {
-    totalEmissions: number;
+interface CategoryData {
+    name: string;
+    value: number;
 }
 
-export function KPIGrid({ totalEmissions }: KPIGridProps) {
+interface DepartmentData {
+    dept_id: string;
+    dept_name: string;
+    total_emissions: number;
+}
+
+interface KPIGridProps {
+    totalEmissions: number;
+    categoryData?: CategoryData[];
+    departmentData?: DepartmentData[];
+}
+
+export function KPIGrid({ totalEmissions, categoryData = [], departmentData = [] }: KPIGridProps) {
+    // Calculate top category
+    const topCategory = categoryData.length > 0
+        ? categoryData.reduce((prev, curr) => (curr.value > prev.value ? curr : prev), categoryData[0])
+        : null;
+
+    // Calculate highest emitting department
+    const topDepartment = departmentData.length > 0
+        ? departmentData.reduce((prev, curr) => (curr.total_emissions > prev.total_emissions ? curr : prev), departmentData[0])
+        : null;
+
+    // Calculate percentage for top category
+    const topCategoryPercent = topCategory && totalEmissions > 0
+        ? ((topCategory.value / totalEmissions) * 100).toFixed(1)
+        : null;
+
+    // Calculate percentage for top department
+    const topDeptPercent = topDepartment && totalEmissions > 0
+        ? ((topDepartment.total_emissions / totalEmissions) * 100).toFixed(1)
+        : null;
+
     const metrics = [
         {
             title: "Total CO₂e",
             value: `${totalEmissions.toLocaleString("en-US", { maximumFractionDigits: 1 })} kg`,
-            change: "0%", // Placeholder as we don't have historical data yet
-            trend: "neutral",
+            change: "0%",
+            trend: "neutral" as const,
             icon: Leaf,
             description: "total emissions"
         },
-        // We can keep placeholders or remove others until we have data. 
-        // Showing updated Total Emissions is the key for now.
         {
             title: "Avg. Daily Emissions",
             value: `${(totalEmissions / 30).toLocaleString("en-US", { maximumFractionDigits: 1 })} kg`,
             change: "0%",
-            trend: "neutral",
+            trend: "neutral" as const,
             icon: Zap,
             description: "est. based on 30d"
         },
         {
             title: "Top Category",
-            value: "TBD", // Requires category breakdown API
-            change: "-",
-            trend: "neutral",
+            value: topCategory ? topCategory.name : "N/A",
+            change: topCategoryPercent ? `${topCategoryPercent}%` : "-",
+            trend: "neutral" as const,
             icon: AlertCircle,
             description: "of total emissions"
         },
         {
             title: "Highest Emitting Dept",
-            value: "TBD", // Requires dept breakdown API
-            change: "-",
-            trend: "neutral",
-            icon: TrendingUp,
+            value: topDepartment ? topDepartment.dept_name : "N/A",
+            change: topDeptPercent ? `${topDeptPercent}%` : "-",
+            trend: "neutral" as const,
+            icon: Building2,
             description: "contribution"
         }
     ];
@@ -60,7 +92,9 @@ export function KPIGrid({ totalEmissions }: KPIGridProps) {
                         <metric.icon className="h-4 w-4 text-neutral-500 dark:text-neutral-400" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold text-neutral-900 dark:text-neutral-50">{metric.value}</div>
+                        <div className="text-2xl font-bold text-neutral-900 dark:text-neutral-50 truncate" title={metric.value}>
+                            {metric.value}
+                        </div>
                         <p className="text-xs flex items-center mt-1">
                             <span
                                 className={`flex items-center font-medium ${metric.trend === "down"

@@ -263,6 +263,62 @@ async def get_department_emissions_by_category(dept_id: int):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+
+@app.get("/analytics/org/{org_id}/by-department")
+async def get_org_emissions_by_department(org_id: str):
+    """Get emissions for an organization grouped by department"""
+    try:
+        # Query logs with department info via joins
+        res = supabase.table("carbon_logs").select(
+            "co2e_kg, departments!inner(id, name, branches!inner(org_id))"
+        ).eq("departments.branches.org_id", org_id).execute()
+        
+        data = {}
+        for row in res.data:
+            dept = row.get('departments', {})
+            dept_name = dept.get('name', 'Unknown')
+            dept_id = dept.get('id')
+            val = row['co2e_kg']
+            if dept_id:
+                key = f"{dept_id}:{dept_name}"
+                data[key] = data.get(key, 0) + val
+        
+        formatted = [{"dept_id": k.split(':')[0], "dept_name": k.split(':')[1], "total_emissions": v} for k, v in data.items()]
+        # Sort by emissions descending
+        formatted.sort(key=lambda x: x['total_emissions'], reverse=True)
+        return {"status": "success", "data": formatted}
+    except Exception as e:
+        print(f"Error fetching org department emissions: {e}")
+        return {"status": "error", "message": str(e), "data": []}
+
+
+@app.get("/analytics/branch/{branch_id}/by-department")
+async def get_branch_emissions_by_department(branch_id: str):
+    """Get emissions for a branch grouped by department"""
+    try:
+        # Query logs with department info
+        res = supabase.table("carbon_logs").select(
+            "co2e_kg, departments!inner(id, name, branch_id)"
+        ).eq("departments.branch_id", branch_id).execute()
+        
+        data = {}
+        for row in res.data:
+            dept = row.get('departments', {})
+            dept_name = dept.get('name', 'Unknown')
+            dept_id = dept.get('id')
+            val = row['co2e_kg']
+            if dept_id:
+                key = f"{dept_id}:{dept_name}"
+                data[key] = data.get(key, 0) + val
+        
+        formatted = [{"dept_id": k.split(':')[0], "dept_name": k.split(':')[1], "total_emissions": v} for k, v in data.items()]
+        # Sort by emissions descending
+        formatted.sort(key=lambda x: x['total_emissions'], reverse=True)
+        return {"status": "success", "data": formatted}
+    except Exception as e:
+        print(f"Error fetching branch department emissions: {e}")
+        return {"status": "error", "message": str(e), "data": []}
+
 @app.get("/recommendations")
 async def get_recommendations(
     org_id: Optional[str] = Query(None, description="Organization ID"),

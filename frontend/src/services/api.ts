@@ -129,6 +129,24 @@ export const getEmissionsByTime = async (
     return json.data;
 };
 
+export const getEmissionsByDepartment = async (
+    orgId?: string,
+    branchId?: string
+) => {
+    let url = "";
+    if (branchId) {
+        url = `${API_URL}/analytics/branch/${branchId}/by-department`;
+    } else if (orgId) {
+        url = `${API_URL}/analytics/org/${orgId}/by-department`;
+    } else {
+        return null;
+    }
+
+    const response = await fetch(url);
+    const json = await response.json();
+    return json.data;
+};
+
 // POST functions for Data Management
 
 export const createOrganization = async (name: string) => {
